@@ -1,0 +1,38 @@
+{
+  "name": "my-bet-visualizer",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@tailwindcss/postcss": "^4.1.17",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.6",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.4.22",
+    "date-fns": "^4.1.0",
+    "next": "^16.0.3",
+    "openai": "^6.9.1",
+    "papaparse": "^5.5.3",
+    "postcss": "^8.5.6",
+    "react": "^19.2.0",
+    "react-calendar-heatmap": "^1.10.0",
+    "react-dom": "^19.2.0",
+    "react-is": "^19.2.0",
+    "recharts": "^3.4.1",
+    "recharts-scale": "^0.4.5",
+    "tailwindcss": "^4.1.17",
+    "typescript": "^5.9.3",
+    "uuid": "^13.0.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/papaparse": "^5.5.0",
+    "@types/uuid": "^11.0.0"
+  }
+}
