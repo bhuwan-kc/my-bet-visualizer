@@ -107,13 +107,18 @@ export class Storage {
   }
 
   static getSettings(): AppSettings {
-    if (!this.isBrowser) return { openaiApiKey: null }
+    if (!this.isBrowser) return { openaiApiKey: null, ignoredTags: [] }
     try {
       const data = localStorage.getItem(STORAGE_KEYS.SETTINGS)
-      return data ? JSON.parse(data) : { openaiApiKey: null }
+      const settings = data ? JSON.parse(data) : { openaiApiKey: null, ignoredTags: [] }
+      // Ensure ignoredTags exists for backward compatibility
+      if (!settings.ignoredTags) {
+        settings.ignoredTags = []
+      }
+      return settings
     } catch (error) {
       console.error('Error reading settings:', error)
-      return { openaiApiKey: null }
+      return { openaiApiKey: null, ignoredTags: [] }
     }
   }
 

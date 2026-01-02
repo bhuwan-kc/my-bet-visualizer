@@ -170,7 +170,8 @@ export function calculateTimeSeriesData(
 }
 
 export function calculateCategoryMetrics(
-  transactions: Transaction[]
+  transactions: Transaction[],
+  ignoredTags: string[] = []
 ): CategoryMetrics[] {
   if (transactions.length === 0) return []
 
@@ -181,6 +182,9 @@ export function calculateCategoryMetrics(
 
   transactions.forEach((t) => {
     t.tags.forEach((tag) => {
+      // Skip ignored tags
+      if (ignoredTags.includes(tag)) return
+      
       if (!categoryMap.has(tag)) {
         categoryMap.set(tag, { transactions: [], symbols: new Set() })
       }
@@ -256,14 +260,15 @@ export function calculateStakeSizeDistribution(
 
 export function calculateAnalytics(
   transactions: Transaction[],
-  filters: Filters
+  filters: Filters,
+  ignoredTags: string[] = []
 ): AnalyticsData {
   const filteredTransactions = filterTransactions(transactions, filters)
 
   return {
     coreMetrics: calculateCoreMetrics(filteredTransactions),
     timeSeriesData: calculateTimeSeriesData(filteredTransactions),
-    categoryMetrics: calculateCategoryMetrics(filteredTransactions),
+    categoryMetrics: calculateCategoryMetrics(filteredTransactions, ignoredTags),
     stakeSizeDistribution: calculateStakeSizeDistribution(filteredTransactions),
   }
 }
@@ -289,7 +294,8 @@ export interface ROIByType {
 }
 
 export function calculateROIByEventType(
-  transactions: Transaction[]
+  transactions: Transaction[],
+  ignoredTags: string[] = []
 ): ROIByType[] {
   if (transactions.length === 0) return []
 
@@ -297,6 +303,9 @@ export function calculateROIByEventType(
 
   transactions.forEach((t) => {
     t.tags.forEach((tag) => {
+      // Skip ignored tags
+      if (ignoredTags.includes(tag)) return
+      
       if (!grouped.has(tag)) {
         grouped.set(tag, [])
       }
@@ -503,5 +512,93 @@ export function calculateRiskOfRuin(
     bestCaseScenario: bestCase,
     recommendation,
   }
+}
+
+// Event Type Performance by Time Period
+export type TimePeriod = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'alltime'
+
+export interface EventTypePerformance {
+  eventType: string
+  totalBets: number
+  wins: number
+  losses: number
+  totalPnL: number
+  roi: number
+  winRate: number
+}
+
+export function calculateEventTypePerformance(
+  transactions: Transaction[],
+  timePeriod: TimePeriod = 'alltime'
+): EventTypePerformance[] {
+  if (transactions.length === 0) return []
+
+  // Filter transactions based on time period
+  const now = new Date()
+  const filteredTransactions = transactions.filter((t) => {
+    if (timePeriod === 'alltime') return true
+    
+    const expDate = parseISO(t.expDate || t.tradeDate)
+    
+    switch (timePeriod) {
+      case 'daily':
+        const yesterday = new Date(now)
+        yesterday.setDate(now.getDate() - 1)
+        return expDate >= yesterday
+      case 'weekly':
+        const lastWeek = new Date(now)
+        lastWeek.setDate(now.getDate() - 7)
+        return expDate >= lastWeek
+      case 'monthly':
+        const lastMonth = new Date(now)
+        lastMonth.setMonth(now.getMonth() - 1)
+        return expDate >= lastMonth
+      case 'yearly':
+        const lastYear = new Date(now)
+        lastYear.setFullYear(now.getFullYear() - 1)
+        return expDate >= lastYear
+      default:
+        return true
+    }
+  })
+
+  // Group by event type (tags)
+  const grouped = new Map<string, Transaction[]>()
+
+  filteredTransactions.forEach((t) => {
+    t.tags.forEach((tag) => {
+      if (!grouped.has(tag)) {
+        grouped.set(tag, [])
+      }
+      grouped.get(tag)!.push(t)
+    })
+  })
+
+  const results: EventTypePerformance[] = []
+  
+  grouped.forEach((txns, eventType) => {
+    const pnls = txns.map((t) => calculatePnL(t))
+    const totalPnL = pnls.reduce((sum, pnl) => sum + pnl, 0)
+    const wins = pnls.filter((pnl) => pnl > 0).length
+    const losses = pnls.filter((pnl) => pnl < 0).length
+    const totalBets = txns.length
+    const winRate = totalBets > 0 ? (wins / totalBets) * 100 : 0
+    
+    // Calculate ROI based on total invested (approximate using qtyLong)
+    const totalInvested = txns.reduce((sum, t) => sum + Math.abs(t.qtyLong * 0.5), 0)
+    const roi = totalInvested > 0 ? (totalPnL / totalInvested) * 100 : 0
+
+    results.push({
+      eventType,
+      totalBets,
+      wins,
+      losses,
+      totalPnL,
+      roi,
+      winRate,
+    })
+  })
+
+  return results.sort((a, b) => b.totalPnL - a.totalPnL)
 }
 

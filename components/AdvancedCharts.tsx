@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   BarChart,
   Bar,
@@ -12,19 +12,29 @@ import {
   Cell,
   ReferenceLine,
 } from 'recharts'
-import { Transaction } from '@/lib/types'
+import { Transaction, StakeSizeDistribution } from '@/lib/types'
 import {
   calculateROIByEventType,
   calculateRiskOfRuin,
 } from '@/lib/analytics'
+import { Storage } from '@/lib/storage'
 
 interface AdvancedChartsProps {
   transactions: Transaction[]
+  stakeSizeDistribution: StakeSizeDistribution[]
 }
 
-export default function AdvancedCharts({ transactions }: AdvancedChartsProps) {
+export default function AdvancedCharts({ transactions, stakeSizeDistribution }: AdvancedChartsProps) {
   const [performanceMetric, setPerformanceMetric] = useState<'roi' | 'pnl'>('pnl')
-  const roiByType = calculateROIByEventType(transactions)
+  const [sizeMetric, setSizeMetric] = useState<'frequency' | 'pnl'>('frequency')
+  const [ignoredTags, setIgnoredTags] = useState<string[]>([])
+  
+  useEffect(() => {
+    const settings = Storage.getSettings()
+    setIgnoredTags(settings.ignoredTags || [])
+  }, [])
+  
+  const roiByType = calculateROIByEventType(transactions, ignoredTags)
   const riskOfRuin = calculateRiskOfRuin(transactions, 1000)
 
   const formatCurrency = (value: number) => `$${value.toFixed(2)}`
@@ -32,6 +42,47 @@ export default function AdvancedCharts({ transactions }: AdvancedChartsProps) {
 
   return (
     <div className="space-y-6">
+      {/* Risk of Ruin Analysis */}
+      <div className="bg-white dark:bg-dark-elevated rounded-lg shadow-sm border border-gray-200 dark:border-dark-border p-6">
+        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 group relative">
+          Risk Analysis
+          <span className="text-sm text-gray-400 cursor-help">ⓘ
+            <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 w-80 z-10 pointer-events-none">
+              Analysis based on $1,000 bankroll. Risk of Ruin = probability of significant loss. Expected = projection after 100 bets.
+              <div className="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-gray-900"></div>
+            </div>
+          </span>
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <div className="space-y-4">
+              <div className="p-4 bg-gray-50 dark:bg-dark-surface rounded-lg">
+                <div className="text-sm text-gray-600 dark:text-gray-400">Risk of Ruin</div>
+                <div className={`text-3xl font-bold ${riskOfRuin.probability > 50 ? 'text-red-600' : riskOfRuin.probability > 20 ? 'text-yellow-600' : 'text-green-600'}`}>
+                  {riskOfRuin.probability.toFixed(1)}%
+                </div>
+              </div>
+              <div className="p-4 bg-gray-50 dark:bg-dark-surface rounded-lg">
+                <div className="text-sm text-gray-600 dark:text-gray-400">Expected Bankroll (100 bets)</div>
+                <div className="text-2xl font-bold">{formatCurrency(riskOfRuin.expectedBankroll)}</div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div className="space-y-4">
+              <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                <div className="text-sm text-gray-600 dark:text-gray-400">Best Case Scenario</div>
+                <div className="text-2xl font-bold text-green-600">{formatCurrency(riskOfRuin.bestCaseScenario)}</div>
+              </div>
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                <div className="text-sm text-gray-600 dark:text-gray-400">Worst Case Scenario</div>
+                <div className="text-2xl font-bold text-red-600">{formatCurrency(riskOfRuin.worstCaseScenario)}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Performance by Event Type */}
       {roiByType.length > 0 && (
         <div className="bg-white dark:bg-dark-elevated rounded-lg shadow-sm border border-gray-200 dark:border-dark-border p-6">
@@ -101,44 +152,74 @@ export default function AdvancedCharts({ transactions }: AdvancedChartsProps) {
         </div>
       )}
 
-      {/* Risk of Ruin Analysis */}
-      <div className="bg-white dark:bg-dark-elevated rounded-lg shadow-sm border border-gray-200 dark:border-dark-border p-6">
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 group relative">
-          Risk Analysis
-          <span className="text-sm text-gray-400 cursor-help">ⓘ
-            <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 w-80 z-10 pointer-events-none">
-              Analysis based on $1,000 bankroll. Risk of Ruin = probability of significant loss. Expected = projection after 100 bets.
-              <div className="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-gray-900"></div>
-            </div>
-          </span>
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <div className="space-y-4">
-              <div className="p-4 bg-gray-50 dark:bg-dark-surface rounded-lg">
-                <div className="text-sm text-gray-600 dark:text-gray-400">Risk of Ruin</div>
-                <div className={`text-3xl font-bold ${riskOfRuin.probability > 50 ? 'text-red-600' : riskOfRuin.probability > 20 ? 'text-yellow-600' : 'text-green-600'}`}>
-                  {riskOfRuin.probability.toFixed(1)}%
-                </div>
-              </div>
-              <div className="p-4 bg-gray-50 dark:bg-dark-surface rounded-lg">
-                <div className="text-sm text-gray-600 dark:text-gray-400">Expected Bankroll (100 bets)</div>
-                <div className="text-2xl font-bold">{formatCurrency(riskOfRuin.expectedBankroll)}</div>
-              </div>
-            </div>
+      {/* Position Size Distribution */}
+      <div className="bg-white dark:bg-gradient-to-br dark:from-dark-elevated dark:to-dark-surface rounded-lg p-6 shadow-sm border border-gray-200 dark:border-dark-border relative overflow-hidden">
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-purple-500/5 to-transparent rounded-full blur-3xl pointer-events-none"></div>
+        <div className="relative z-10">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold mb-3">Position Size Distribution</h3>
+          <div className="flex gap-2 border-b border-gray-200 dark:border-dark-border">
+            <button
+              onClick={() => setSizeMetric('frequency')}
+              className={`px-4 py-2 font-medium transition-colors ${
+                sizeMetric === 'frequency'
+                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              Frequency
+            </button>
+            <button
+              onClick={() => setSizeMetric('pnl')}
+              className={`px-4 py-2 font-medium transition-colors ${
+                sizeMetric === 'pnl'
+                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              Net P&L
+            </button>
           </div>
-          <div>
-            <div className="space-y-4">
-              <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                <div className="text-sm text-gray-600 dark:text-gray-400">Best Case Scenario</div>
-                <div className="text-2xl font-bold text-green-600">{formatCurrency(riskOfRuin.bestCaseScenario)}</div>
-              </div>
-              <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                <div className="text-sm text-gray-600 dark:text-gray-400">Worst Case Scenario</div>
-                <div className="text-2xl font-bold text-red-600">{formatCurrency(riskOfRuin.worstCaseScenario)}</div>
-              </div>
+        </div>
+          {stakeSizeDistribution.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={stakeSizeDistribution}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="range" 
+                  label={{ value: 'Position Size (contracts)', position: 'insideBottom', offset: -5 }}
+                  tick={{ fontSize: 12 }} 
+                />
+                <YAxis 
+                  label={{ 
+                    value: sizeMetric === 'frequency' ? 'Frequency' : 'Net P&L ($)', 
+                    angle: -90, 
+                    position: 'insideLeft' 
+                  }}
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={sizeMetric === 'pnl' ? formatCurrency : undefined}
+                />
+                <Tooltip 
+                  formatter={(value: number) => 
+                    sizeMetric === 'pnl' ? formatCurrency(value) : value
+                  }
+                />
+                <Bar
+                  dataKey={sizeMetric === 'frequency' ? 'count' : 'totalPnL'}
+                  fill={sizeMetric === 'frequency' ? '#10b981' : '#2563eb'}
+                  name={sizeMetric === 'frequency' ? 'Frequency' : 'Net P&L'}
+                >
+                  {sizeMetric === 'pnl' && stakeSizeDistribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={(entry.totalPnL ?? 0) >= 0 ? '#10b981' : '#ef4444'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[300px] flex items-center justify-center text-gray-500">
+              No data available
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

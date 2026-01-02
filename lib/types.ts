@@ -86,6 +86,7 @@ export interface AnalyticsData {
 
 export interface AppSettings {
   openaiApiKey: string | null
+  ignoredTags: string[]
 }
 
 export interface AISummary {

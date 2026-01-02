@@ -14,6 +14,7 @@ export default function FileUpload({ onUploadComplete }: FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [files, setFiles] = useState<UploadedFile[]>([])
+  const [isExpanded, setIsExpanded] = useState(false)
 
   const loadFiles = useCallback(() => {
     setFiles(Storage.getFiles())
@@ -209,54 +210,65 @@ export default function FileUpload({ onUploadComplete }: FileUploadProps) {
       {/* Uploaded Files List */}
       {files.length > 0 && (
         <div>
-          <div className="flex justify-between items-center mb-3">
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="w-full flex justify-between items-center mb-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/30 p-2 rounded-lg transition-colors"
+          >
             <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Uploaded Files ({files.length})
             </h3>
-            <button
-              onClick={handleDeleteAll}
-              className="text-sm text-red-600 hover:text-red-700 font-medium"
-            >
-              Delete All Data
-            </button>
-          </div>
-          <div className="space-y-2">
-            {files.map((file) => (
-              <div
-                key={file.id}
-                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600"
-              >
-                <div className="flex-1">
-                  <div className="font-medium text-gray-900 dark:text-white">
-                    {file.filename}
-                  </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                    {file.parseStatus === 'success' && (
-                      <span className="text-green-600 dark:text-green-400">
-                        ✓ {file.positionCount} positions
-                      </span>
-                    )}
-                    {file.parseStatus === 'parsing' && (
-                      <span className="text-blue-600 dark:text-blue-400">
-                        ⏳ Parsing...
-                      </span>
-                    )}
-                    {file.parseStatus === 'error' && (
-                      <span className="text-red-600 dark:text-red-400">
-                        ✗ Error: {file.error}
-                      </span>
-                    )}
-                  </div>
-                </div>
+            <span className={`text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
+              ▼
+            </span>
+          </button>
+          
+          {isExpanded && (
+            <div className="space-y-2">
+              <div className="flex justify-end mb-2">
                 <button
-                  onClick={() => handleDeleteFile(file.id)}
-                  className="ml-4 px-3 py-1.5 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                  onClick={handleDeleteAll}
+                  className="text-sm text-red-600 hover:text-red-700 font-medium"
                 >
-                  Delete
+                  Delete All Data
                 </button>
               </div>
-            ))}
-          </div>
+              {files.map((file) => (
+                <div
+                  key={file.id}
+                  className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600"
+                >
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900 dark:text-white">
+                      {file.filename}
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                      {file.parseStatus === 'success' && (
+                        <span className="text-green-600 dark:text-green-400">
+                          ✓ {file.positionCount} positions
+                        </span>
+                      )}
+                      {file.parseStatus === 'parsing' && (
+                        <span className="text-blue-600 dark:text-blue-400">
+                          ⏳ Parsing...
+                        </span>
+                      )}
+                      {file.parseStatus === 'error' && (
+                        <span className="text-red-600 dark:text-red-400">
+                          ✗ Error: {file.error}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteFile(file.id)}
+                    className="ml-4 px-3 py-1.5 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

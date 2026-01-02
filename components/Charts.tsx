@@ -34,9 +34,8 @@ export default function Charts({
   stakeSizeDistribution,
   coreMetrics,
 }: ChartsProps) {
-  const [pnlTimeframe, setPnlTimeframe] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily')
+  const [pnlTimeframe, setPnlTimeframe] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('weekly')
   const [pnlMetric, setPnlMetric] = useState<'cumulative' | 'net'>('cumulative')
-  const [sizeMetric, setSizeMetric] = useState<'frequency' | 'pnl'>('frequency')
 
   const formatCurrency = (value: number) => {
     return `$${value.toFixed(2)}`
@@ -203,77 +202,6 @@ export default function Charts({
             No data available
           </div>
         )}
-        </div>
-      </div>
-
-      {/* Position Size Distribution */}
-      <div className="bg-white dark:bg-gradient-to-br dark:from-dark-elevated dark:to-dark-surface rounded-lg p-6 shadow-sm border border-gray-200 dark:border-dark-border relative overflow-hidden">
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-purple-500/5 to-transparent rounded-full blur-3xl pointer-events-none"></div>
-        <div className="relative z-10">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold mb-3">Position Size Distribution</h3>
-          <div className="flex gap-2 border-b border-gray-200 dark:border-dark-border">
-            <button
-              onClick={() => setSizeMetric('frequency')}
-              className={`px-4 py-2 font-medium transition-colors ${
-                sizeMetric === 'frequency'
-                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
-            >
-              Frequency
-            </button>
-            <button
-              onClick={() => setSizeMetric('pnl')}
-              className={`px-4 py-2 font-medium transition-colors ${
-                sizeMetric === 'pnl'
-                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
-            >
-              Net P&L
-            </button>
-          </div>
-        </div>
-          {stakeSizeDistribution.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={stakeSizeDistribution}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="range" 
-                  label={{ value: 'Position Size (contracts)', position: 'insideBottom', offset: -5 }}
-                  tick={{ fontSize: 12 }} 
-                />
-                <YAxis 
-                  label={{ 
-                    value: sizeMetric === 'frequency' ? 'Frequency' : 'Net P&L ($)', 
-                    angle: -90, 
-                    position: 'insideLeft' 
-                  }}
-                  tick={{ fontSize: 12 }}
-                  tickFormatter={sizeMetric === 'pnl' ? formatCurrency : undefined}
-                />
-                <Tooltip 
-                  formatter={(value: number) => 
-                    sizeMetric === 'pnl' ? formatCurrency(value) : value
-                  }
-                />
-                <Bar
-                  dataKey={sizeMetric === 'frequency' ? 'count' : 'totalPnL'}
-                  fill={sizeMetric === 'frequency' ? '#10b981' : '#2563eb'}
-                  name={sizeMetric === 'frequency' ? 'Frequency' : 'Net P&L'}
-                >
-                  {sizeMetric === 'pnl' && stakeSizeDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={(entry.totalPnL ?? 0) >= 0 ? '#10b981' : '#ef4444'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-[300px] flex items-center justify-center text-gray-500">
-              No data available
-            </div>
-          )}
         </div>
       </div>
     </div>
